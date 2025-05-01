@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import pandas as pd
 import yfinance as yf
@@ -8,6 +9,10 @@ from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import LSTM, GRU, Dense, Dropout
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.callbacks import EarlyStopping
+from datetime import datetime
+
+# Create reports directory, if it does not exist already
+os.makedirs('reports', exist_ok=True)
 
 plt.style.use('ggplot')
 
@@ -127,18 +132,17 @@ def train_model(model, X_train, y_train, validation_split=0.1, epochs=100, batch
     )
     return history
 
-def evaluate_model(model, X_test, y_test, scaler, original_data, features):
-    """Evaluate model performance and visualize results"""
-    # Make predictions
+def evaluate_model(model, X_test, y_test, scaler, original_data, features, model_name, ticker):
+    """Evaluate model performance and generate report components"""
+    start_time = datetime.now()
     predictions = model.predict(X_test)
+    test_time = (datetime.now() - start_time).total_seconds()
     
-    # Inverse transform predictions
-    # Create dummy array for inverse transform
+    # Inverse transform
     dummy_array = np.zeros((len(predictions), len(features)))
-    dummy_array[:, 0] = predictions.flatten()  # Assuming Close is first feature
+    dummy_array[:, 0] = predictions.flatten()
     predictions = scaler.inverse_transform(dummy_array)[:, 0]
     
-    # Inverse transform actual values
     dummy_array[:, 0] = y_test.flatten()
     y_test_actual = scaler.inverse_transform(dummy_array)[:, 0]
     
@@ -147,22 +151,106 @@ def evaluate_model(model, X_test, y_test, scaler, original_data, features):
     rmse = np.sqrt(mse)
     mae = mean_absolute_error(y_test_actual, predictions)
     
-    print(f"RMSE: {rmse:.2f}")
-    print(f"MAE: {mae:.2f}")
-    
-    # Plot results
+    # Generate plots
     test_dates = original_data.index[-len(y_test_actual):]
+    plot_filename = save_prediction_plot(test_dates, y_test_actual, predictions, model_name, ticker)
     
+    return {
+        'rmse': rmse,
+        'mae': mae,
+        'test_time': test_time,
+        'predictions': predictions,
+        'actual': y_test_actual,
+        'plot_file': plot_filename
+    }
+
+def generate_report(ticker, model_name, rmse, mae, model_summary, 
+                   train_time, test_time, params, additional_notes=""):
+    """Generate a performance report and save to file"""
+    report_filename = f"reports/{ticker}_{model_name}_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
+    
+    with open(report_filename, 'w') as f:
+        f.write("="*60 + "\n")
+        f.write(f"STOCK PREDICTION MODEL PERFORMANCE REPORT\n")
+        f.write("="*60 + "\n\n")
+        
+        f.write(f"Ticker: {ticker}\n")
+        f.write(f"Model Type: {model_name}\n")
+        f.write(f"Report Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n")
+        
+        f.write("-"*60 + "\n")
+        f.write("MODEL METRICS\n")
+        f.write("-"*60 + "\n")
+        f.write(f"Root Mean Squared Error (RMSE): {rmse:.4f}\n")
+        f.write(f"Mean Absolute Error (MAE): {mae:.4f}\n\n")
+        
+        f.write("-"*60 + "\n")
+        f.write("MODEL ARCHITECTURE\n")
+        f.write("-"*60 + "\n")
+        f.write(model_summary + "\n\n")
+        
+        f.write("-"*60 + "\n")
+        f.write("TRAINING DETAILS\n")
+        f.write("-"*60 + "\n")
+        f.write(f"Training Time: {train_time:.2f} seconds\n")
+        f.write(f"Testing Time: {test_time:.2f} seconds\n")
+        f.write(f"Model Parameters:\n")
+        for key, value in params.items():
+            f.write(f"  {key}: {value}\n")
+        
+        if additional_notes:
+            f.write("\n" + "-"*60 + "\n")
+            f.write("ADDITIONAL NOTES\n")
+            f.write("-"*60 + "\n")
+            f.write(additional_notes + "\n")
+        
+        f.write("\n" + "="*60 + "\n")
+        f.write("END OF REPORT\n")
+        f.write("="*60 + "\n")
+    
+    print(f"Report generated: {report_filename}")
+    return report_filename
+
+def save_training_plot(history, model_name, ticker):
+    """Save training history plot as image"""
+    plt.figure(figsize=(12, 5))
+    plt.subplot(1, 2, 1)
+    plt.plot(history.history['loss'], label='Train Loss')
+    plt.plot(history.history['val_loss'], label='Validation Loss')
+    plt.title('Model Loss')
+    plt.ylabel('Loss')
+    plt.xlabel('Epoch')
+    plt.legend()
+    
+    plt.subplot(1, 2, 2)
+    plt.plot(history.history['mae'], label='Train MAE')
+    plt.plot(history.history['val_mae'], label='Validation MAE')
+    plt.title('Model MAE')
+    plt.ylabel('MAE')
+    plt.xlabel('Epoch')
+    plt.legend()
+    
+    plot_filename = f"reports/{ticker}_{model_name}_training_plot_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
+    plt.tight_layout()
+    plt.savefig(plot_filename)
+    plt.close()
+    return plot_filename
+
+def save_prediction_plot(test_dates, y_test_actual, predictions, model_name, ticker):
+    """Save prediction plot as image"""
     plt.figure(figsize=(14, 6))
     plt.plot(test_dates, y_test_actual, label='Actual Price', color='blue')
     plt.plot(test_dates, predictions, label='Predicted Price', color='red', linestyle='--')
-    plt.title('Stock Price Prediction')
+    plt.title(f'{ticker} Stock Price Prediction ({model_name})')
     plt.xlabel('Date')
     plt.ylabel('Price ($)')
     plt.legend()
-    plt.show()
     
-    return rmse, mae
+    plot_filename = f"reports/{ticker}_{model_name}_prediction_plot_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
+    plt.savefig(plot_filename)
+    plt.close()
+    return plot_filename
+
 
 # Main Execution
 if __name__ == "__main__":
@@ -173,62 +261,99 @@ if __name__ == "__main__":
     SEQ_LENGTH = 60
     TEST_SIZE = 0.2
     
-    # 1. Get and preprocess data
+    # Data collection and preprocessing
     stock_data = fetch_and_preprocess_data(TICKER)
+    X_train, X_test, y_train, y_test, scaler = prepare_data(stock_data, FEATURES, TARGET, SEQ_LENGTH, TEST_SIZE)
     
-    # 2. Prepare data for modeling
-    X_train, X_test, y_train, y_test, scaler = prepare_data(
-        stock_data, FEATURES, TARGET, SEQ_LENGTH, TEST_SIZE
-    )
-    
-    # 3. Build and train LSTM model
-    print("Training LSTM Model...")
+    # LSTM Model
+    lstm_start = datetime.now()
     lstm_model = build_lstm_model((SEQ_LENGTH, len(FEATURES)))
     lstm_history = train_model(lstm_model, X_train, y_train)
+    lstm_train_time = (datetime.now() - lstm_start).total_seconds()
     
     # Evaluate LSTM
-    print("\nLSTM Model Evaluation:")
-    lstm_rmse, lstm_mae = evaluate_model(
-        lstm_model, X_test, y_test, scaler, stock_data, FEATURES
+    lstm_results = evaluate_model(lstm_model, X_test, y_test, scaler, stock_data, FEATURES, "LSTM", TICKER)
+    save_training_plot(lstm_history, "LSTM", TICKER)
+    
+    # Generate LSTM report
+    lstm_report = generate_report(
+        ticker=TICKER,
+        model_name="LSTM",
+        rmse=lstm_results['rmse'],
+        mae=lstm_results['mae'],
+        model_summary=str(lstm_model.summary()),
+        train_time=lstm_train_time,
+        test_time=lstm_results['test_time'],
+        params={
+            'Sequence Length': SEQ_LENGTH,
+            'Features': FEATURES,
+            'LSTM Units': 50,
+            'Dropout Rate': 0.2,
+            'Epochs': 100,
+            'Batch Size': 32
+        },
+        additional_notes="LSTM model with two LSTM layers and dropout regularization."
     )
     
-    # 4. Build and train GRU model
-    print("\nTraining GRU Model...")
+    # GRU Model
+    gru_start = datetime.now()
     gru_model = build_gru_model((SEQ_LENGTH, len(FEATURES)))
     gru_history = train_model(gru_model, X_train, y_train)
+    gru_train_time = (datetime.now() - gru_start).total_seconds()
     
     # Evaluate GRU
-    print("\nGRU Model Evaluation:")
-    gru_rmse, gru_mae = evaluate_model(
-        gru_model, X_test, y_test, scaler, stock_data, FEATURES
+    gru_results = evaluate_model(gru_model, X_test, y_test, scaler, stock_data, FEATURES, "GRU", TICKER)
+    save_training_plot(gru_history, "GRU", TICKER)
+    
+    # Generate GRU report
+    gru_report = generate_report(
+        ticker=TICKER,
+        model_name="GRU",
+        rmse=gru_results['rmse'],
+        mae=gru_results['mae'],
+        model_summary=str(gru_model.summary()),
+        train_time=gru_train_time,
+        test_time=gru_results['test_time'],
+        params={
+            'Sequence Length': SEQ_LENGTH,
+            'Features': FEATURES,
+            'GRU Units': 50,
+            'Dropout Rate': 0.2,
+            'Epochs': 100,
+            'Batch Size': 32
+        },
+        additional_notes="GRU model with two GRU layers and tanh/sigmoid activations."
     )
     
-    # 5. Compare models
-    print("\nModel Comparison:")
-    print(f"LSTM - RMSE: {lstm_rmse:.2f}, MAE: {lstm_mae:.2f}")
-    print(f"GRU - RMSE: {gru_rmse:.2f}, MAE: {gru_mae:.2f}")
+    # Comparative report
+    comparative_report = f"reports/{TICKER}_COMPARATIVE_REPORT_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
+    with open(comparative_report, 'w') as f:
+        f.write("="*60 + "\n")
+        f.write(f"{TICKER} MODEL COMPARISON REPORT\n")
+        f.write("="*60 + "\n\n")
+        
+        f.write(f"Comparison Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n")
+        
+        f.write("-"*60 + "\n")
+        f.write("PERFORMANCE METRICS COMPARISON\n")
+        f.write("-"*60 + "\n")
+        f.write(f"{'Metric':<20} {'LSTM':<15} {'GRU':<15}\n")
+        f.write(f"{'RMSE':<20} {lstm_results['rmse']:<15.4f} {gru_results['rmse']:<15.4f}\n")
+        f.write(f"{'MAE':<20} {lstm_results['mae']:<15.4f} {gru_results['mae']:<15.4f}\n")
+        f.write(f"{'Training Time (s)':<20} {lstm_train_time:<15.2f} {gru_train_time:<15.2f}\n")
+        f.write(f"{'Testing Time (s)':<20} {lstm_results['test_time']:<15.4f} {gru_results['test_time']:<15.4f}\n\n")
+        
+        f.write("-"*60 + "\n")
+        f.write("CONCLUSION\n")
+        f.write("-"*60 + "\n")
+        f.write("Lower RMSE/MAE values indicate better performance. Compare training times\n")
+        f.write("for computational efficiency considerations.\n")
+        
+        f.write("\n" + "="*60 + "\n")
+        f.write("END OF REPORT\n")
+        f.write("="*60 + "\n")
     
-    # Plot training history
-    plt.figure(figsize=(12, 5))
-    plt.subplot(1, 2, 1)
-    plt.plot(lstm_history.history['loss'], label='LSTM Train')
-    plt.plot(lstm_history.history['val_loss'], label='LSTM Validation')
-    plt.plot(gru_history.history['loss'], label='GRU Train')
-    plt.plot(gru_history.history['val_loss'], label='GRU Validation')
-    plt.title('Model Loss')
-    plt.ylabel('Loss')
-    plt.xlabel('Epoch')
-    plt.legend()
-    
-    plt.subplot(1, 2, 2)
-    plt.plot(lstm_history.history['mae'], label='LSTM Train')
-    plt.plot(lstm_history.history['val_mae'], label='LSTM Validation')
-    plt.plot(gru_history.history['mae'], label='GRU Train')
-    plt.plot(gru_history.history['val_mae'], label='GRU Validation')
-    plt.title('Model MAE')
-    plt.ylabel('MAE')
-    plt.xlabel('Epoch')
-    plt.legend()
-    
-    plt.tight_layout()
-    plt.show()
+    print(f"\nAll reports generated:")
+    print(f"- LSTM Report: {lstm_report}")
+    print(f"- GRU Report: {gru_report}")
+    print(f"- Comparative Report: {comparative_report}")

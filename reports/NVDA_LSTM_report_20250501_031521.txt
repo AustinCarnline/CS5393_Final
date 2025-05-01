@@ -1,0 +1,40 @@
+============================================================
+STOCK PREDICTION MODEL PERFORMANCE REPORT
+============================================================
+
+Ticker: NVDA
+Model Type: LSTM
+Report Generated: 2025-05-01 03:15:21
+
+------------------------------------------------------------
+MODEL METRICS
+------------------------------------------------------------
+Root Mean Squared Error (RMSE): 7.4966
+Mean Absolute Error (MAE): 5.6389
+
+------------------------------------------------------------
+MODEL ARCHITECTURE
+------------------------------------------------------------
+None
+
+------------------------------------------------------------
+TRAINING DETAILS
+------------------------------------------------------------
+Training Time: 30.26 seconds
+Testing Time: 0.52 seconds
+Model Parameters:
+  Sequence Length: 60
+  Features: ['Close', 'Volume', 'SMA_50', 'RSI', 'MACD', 'Volume_Change']
+  LSTM Units: 50
+  Dropout Rate: 0.2
+  Epochs: 100
+  Batch Size: 32
+
+------------------------------------------------------------
+ADDITIONAL NOTES
+------------------------------------------------------------
+LSTM model with two LSTM layers and dropout regularization.
+
+============================================================
+END OF REPORT
+============================================================
