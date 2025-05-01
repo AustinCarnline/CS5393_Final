@@ -127,7 +127,7 @@ def train_model(model, X_train, y_train, validation_split=0.1, epochs=100, batch
     )
     return history
 
-def evaluate_model(model, X_test, y_test, scaler, original_data):
+def evaluate_model(model, X_test, y_test, scaler, original_data, features):
     """Evaluate model performance and visualize results"""
     # Make predictions
     predictions = model.predict(X_test)
@@ -189,7 +189,7 @@ if __name__ == "__main__":
     # Evaluate LSTM
     print("\nLSTM Model Evaluation:")
     lstm_rmse, lstm_mae = evaluate_model(
-        lstm_model, X_test, y_test, scaler, stock_data
+        lstm_model, X_test, y_test, scaler, stock_data, FEATURES
     )
     
     # 4. Build and train GRU model
@@ -200,7 +200,7 @@ if __name__ == "__main__":
     # Evaluate GRU
     print("\nGRU Model Evaluation:")
     gru_rmse, gru_mae = evaluate_model(
-        gru_model, X_test, y_test, scaler, stock_data
+        gru_model, X_test, y_test, scaler, stock_data, FEATURES
     )
     
     # 5. Compare models
