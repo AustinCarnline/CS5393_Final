@@ -12,7 +12,7 @@ from tensorflow.keras.callbacks import EarlyStopping
 plt.style.use('ggplot')
 
 # 1. Data Collection and Preprocessing
-def fetch_and_preprocess_data(ticker="AAPL", start_date="2010-01-01", end_date="2023-11-13"):
+def fetch_and_preprocess_data(ticker="NVDA", start_date="2010-01-01", end_date="2023-11-13"):
     """Fetch stock data and preprocess it with technical indicators"""
     # Download data
     data = yf.download(ticker, start=start_date, end=end_date)
@@ -167,7 +167,7 @@ def evaluate_model(model, X_test, y_test, scaler, original_data, features):
 # Main Execution
 if __name__ == "__main__":
     # Configuration
-    TICKER = "AAPL"
+    TICKER = "NVDA"
     FEATURES = ['Close', 'Volume', 'SMA_50', 'RSI', 'MACD', 'Volume_Change']
     TARGET = 'Close'
     SEQ_LENGTH = 60
