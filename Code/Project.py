@@ -93,7 +93,7 @@ def build_lstm_model(input_shape, units=50, dropout_rate=0.2):
         Dropout(dropout_rate),
         LSTM(units, return_sequences=False),
         Dropout(dropout_rate),
-        Dense(25, activation='relu'),
+        Dense(25, activation='tanh'),
         Dense(1)
     ])
     model.compile(optimizer=Adam(learning_rate=0.001), 
@@ -110,7 +110,7 @@ def build_gru_model(input_shape, units=50, dropout_rate=0.2):
         GRU(units, return_sequences=False,
            activation='tanh', recurrent_activation='sigmoid'),
         Dropout(dropout_rate),
-        Dense(25, activation='relu'),
+        Dense(25, activation='tanh'),
         Dense(1)
     ])
     model.compile(optimizer=Adam(learning_rate=0.001), 

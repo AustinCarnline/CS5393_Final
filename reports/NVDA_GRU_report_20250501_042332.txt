@@ -1,0 +1,40 @@
+============================================================
+STOCK PREDICTION MODEL PERFORMANCE REPORT
+============================================================
+
+Ticker: NVDA
+Model Type: GRU
+Report Generated: 2025-05-01 04:23:32
+
+------------------------------------------------------------
+MODEL METRICS
+------------------------------------------------------------
+Root Mean Squared Error (RMSE): 4.3398
+Mean Absolute Error (MAE): 2.9762
+
+------------------------------------------------------------
+MODEL ARCHITECTURE
+------------------------------------------------------------
+None
+
+------------------------------------------------------------
+TRAINING DETAILS
+------------------------------------------------------------
+Training Time: 60.48 seconds
+Testing Time: 0.61 seconds
+Model Parameters:
+  Sequence Length: 60
+  Features: ['Close', 'Volume', 'SMA_50', 'RSI', 'MACD', 'Volume_Change']
+  GRU Units: 50
+  Dropout Rate: 0.2
+  Epochs: 100
+  Batch Size: 32
+
+------------------------------------------------------------
+ADDITIONAL NOTES
+------------------------------------------------------------
+GRU model with two GRU layers and tanh/sigmoid activations.
+
+============================================================
+END OF REPORT
+============================================================
